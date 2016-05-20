@@ -25,11 +25,12 @@ extern char tData[2][4];
 //==============================================================================
 typedef union __packed
 {
-	uint8 byte[12];
-	struct
+	uint8 byte[12+6];
+	struct __packed
 	{
 		uint8 head[4];
 		uint8 sData[2][4];
+		uint8 timeData[6];
 	};
 }u_REMOTE_TEMP;
 extern u_REMOTE_TEMP remoteTemp;

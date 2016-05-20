@@ -68,36 +68,39 @@ static void ICACHE_FLASH_ATTR loop(os_event_t *events)
 	char_24x16(14, 48, 3);
 	char_24x16(tData[0][3] - '0', 56, 3);
 	char_24x16(11, 72, 3);
-	addValueToArray(tData[0], temperature[0], NON_ROTATE);
-	addValueToArray(tData[1], temperature[1], NON_ROTATE);
-	//================================================
-	static int cntr = 60;
-	if (cntr)		cntr--;
-	else
-	{
-		cntr = 60;
-		ets_uart_printf("T1 = %s, T2 = %s\r\n", tData[0], tData[1]);
-		addValueToArray(tData[0], temperature[0], ROTATE);
-		addValueToArray(tData[1], temperature[1], ROTATE);
-		//mergeAnswerWith(temperature);
-	}
-	mergeAnswerWith(temperature);
-	timeIncrement();
-	printTime();
-	printDate();
+
 
 	//===========================================
 	//uint32 t = getSetTemperature(date_time.TIME.hour * 60 + date_time.TIME.min);
 	//gpio_write(GPIO_LED_PIN, ~gpio_read(GPIO_LED_PIN));
 
-	if(configs.hwSettings.sensor[0].mode == SENSOR_MODE_LOCAL ||
-			configs.hwSettings.sensor[1].mode == SENSOR_MODE_LOCAL)
-	{
-		sendUDPbroadcast(remoteTemp.byte, (uint16)sizeof(remoteTemp));
-//		serviceMode = MODE_SEND_BC;
-//		service_timer_start();
-	}
 
+	if(configs.hwSettings.deviceMode == DEVICE_MODE_MASTER)
+	{
+		addValueToArray(tData[0], temperature[0], NON_ROTATE);
+		addValueToArray(tData[1], temperature[1], NON_ROTATE);
+		//================================================
+		static int cntr = 60;
+		if (cntr)		cntr--;
+		else
+		{
+			cntr = 60;
+			ets_uart_printf("T1 = %s, T2 = %s\r\n", tData[0], tData[1]);
+			addValueToArray(tData[0], temperature[0], ROTATE);
+			addValueToArray(tData[1], temperature[1], ROTATE);
+				//mergeAnswerWith(temperature);
+		}
+		mergeAnswerWith(temperature);
+		timeIncrement();
+
+		// add time data to broadcast pack
+
+
+
+		sendUDPbroadcast(remoteTemp.byte, (uint16)sizeof(remoteTemp));
+	}
+	printTime();
+	printDate();
 }
 
 

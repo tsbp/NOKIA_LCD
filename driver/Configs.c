@@ -9,6 +9,7 @@
 #include "user_interface.h"
 #include "driver/lcd1100.h"
 #include "driver/Configs.h"
+#include "driver/services.h"
 //==============================================================================
 s_DATE_TIME date_time = {.DATE.day   = 25,
                          .DATE.month = 1,
@@ -97,6 +98,15 @@ void ICACHE_FLASH_ATTR timeIncrement(void)
       }
     }
   }
+        remoteTemp.timeData[0] = (uint8) date_time.TIME.sec;
+  		remoteTemp.timeData[1] = (uint8) date_time.TIME.min;
+  		remoteTemp.timeData[2] = (uint8) date_time.TIME.hour;
+  		remoteTemp.timeData[3] = (uint8) date_time.DATE.day;
+  		remoteTemp.timeData[4] = (uint8) date_time.DATE.month;
+  		remoteTemp.timeData[5] = (uint8) (date_time.DATE.year - 2000);
+//  		int i;
+//  		for (i = 0; i < 6; i++) ets_uart_printf("%d ",  remoteTemp.timeData[i]);
+//  					ets_uart_printf("\r\n");
 }
 //==============================================================================
 void ICACHE_FLASH_ATTR timeUpdate(char *aPtr)
