@@ -15,6 +15,7 @@
 #include "driver/UDP_Source.h"
 #include "driver/wifi.h"
 #include "driver/gpio16.h"
+#include "driver/services.h"
 //============================================================================================================================
 extern s_DATE_TIME date_time;
 
@@ -35,20 +36,20 @@ static void loop(os_event_t *events);
 
 //extern void UDP_Recieved(void *arg, char *pusrdata, unsigned short length);
 //static struct ip_info ipConfig;
+
+//char remoteTemp[12] = {"RTMP"};
+
+
 //======================= Main code function ============================================================
 static void ICACHE_FLASH_ATTR loop(os_event_t *events)
  {
-	char temp[2][4];
-	if(configs.nastr.swapSens == '1')
-	{
-		ds18b20(1, temp[0]);
-		ds18b20(0, temp[1]);
-	}
-	else if(configs.nastr.swapSens == '0')
-	{
-		ds18b20(0, temp[0]);
-		ds18b20(1, temp[1]);
-	}
+	int i,j;
+
+	for(i = 0; i < DevicesCount; i++) ds18b20(i, tData[i]);
+
+	for(i = 0; i < 2; i++)
+		if(configs.hwSettings.sensor[i].mode == SENSOR_MODE_LOCAL)
+				for(j = 0; j < 4; j++) remoteTemp.sData[i][j] = tData[i][j];
 
 	ds18b20_Convert();
 
@@ -57,27 +58,27 @@ static void ICACHE_FLASH_ATTR loop(os_event_t *events)
 //	ets_uart_printf("ip: "IPSTR" \r\n", IP2STR(&ipConfig.ip));
 
 	//=========== show temperature ===================
-	if (temp[0][0] == '+')
+	if (tData[0][0] == '+')
 		char_24x16(12, 0, 3);
 	else
 		char_24x16(13, 0, 3);
 
-	char_24x16(temp[0][1] - '0', 16, 3);
-	char_24x16(temp[0][2] - '0', 32, 3);
+	char_24x16(tData[0][1] - '0', 16, 3);
+	char_24x16(tData[0][2] - '0', 32, 3);
 	char_24x16(14, 48, 3);
-	char_24x16(temp[0][3] - '0', 56, 3);
+	char_24x16(tData[0][3] - '0', 56, 3);
 	char_24x16(11, 72, 3);
-	addValueToArray(temp[0], temperature[0], NON_ROTATE);
-	addValueToArray(temp[1], temperature[1], NON_ROTATE);
+	addValueToArray(tData[0], temperature[0], NON_ROTATE);
+	addValueToArray(tData[1], temperature[1], NON_ROTATE);
 	//================================================
 	static int cntr = 60;
 	if (cntr)		cntr--;
 	else
 	{
 		cntr = 60;
-		ets_uart_printf("T1 = %s, T2 = %s\r\n", temp[0], temp[1]);
-		addValueToArray(temp[0], temperature[0], ROTATE);
-		addValueToArray(temp[1], temperature[1], ROTATE);
+		ets_uart_printf("T1 = %s, T2 = %s\r\n", tData[0], tData[1]);
+		addValueToArray(tData[0], temperature[0], ROTATE);
+		addValueToArray(tData[1], temperature[1], ROTATE);
 		//mergeAnswerWith(temperature);
 	}
 	mergeAnswerWith(temperature);
@@ -86,8 +87,16 @@ static void ICACHE_FLASH_ATTR loop(os_event_t *events)
 	printDate();
 
 	//===========================================
-	uint32 t = getSetTemperature(date_time.TIME.hour * 60 + date_time.TIME.min);
-	gpio_write(GPIO_LED_PIN, ~gpio_read(GPIO_LED_PIN));
+	//uint32 t = getSetTemperature(date_time.TIME.hour * 60 + date_time.TIME.min);
+	//gpio_write(GPIO_LED_PIN, ~gpio_read(GPIO_LED_PIN));
+
+	if(configs.hwSettings.sensor[0].mode == SENSOR_MODE_LOCAL ||
+			configs.hwSettings.sensor[1].mode == SENSOR_MODE_LOCAL)
+	{
+		sendUDPbroadcast(remoteTemp.byte, (uint16)sizeof(remoteTemp));
+//		serviceMode = MODE_SEND_BC;
+//		service_timer_start();
+	}
 
 }
 
@@ -96,21 +105,25 @@ static void ICACHE_FLASH_ATTR loop(os_event_t *events)
  * Setup program. When user_init runs the debug printouts will not always
  * show on the serial console. So i run the inits in here, 2 seconds later.
  *============================================================================*/
-static void ICACHE_FLASH_ATTR setup(void) {
+static void ICACHE_FLASH_ATTR setup(void)
+{
+	Lcd_Clear();
+	LINES();
 
-	readConfigs();
-
-	if(configs.nastr.DEFAULT_AP == 0)
-		 setup_wifi_ap_mode();
-	else setup_wifi_st_mode();
-
-
-	Lcd_Init();
-	ets_uart_printf("Lcd initiated\n");
 	ds18b20_init();
 	temperArrInit(temperature);
 
-	UDP_Init();
+	//saveConfigs();
+
+
+	if     (configs.hwSettings.wifi.mode == SOFTAP_MODE) 		setup_wifi_ap_mode();
+	else if(configs.hwSettings.wifi.mode == STATION_MODE)		setup_wifi_st_mode();
+
+	ets_uart_printf("configs.nastr.SSID = %s\r\n", configs.hwSettings.wifi.SSID);
+	ets_uart_printf("configs.nastr.SSID_PASS = %s\r\n", configs.hwSettings.wifi.SSID_PASS);
+
+	//UDP_Init();
+	UDP_Init_client();
 
 
 	// Start loop timer
@@ -118,44 +131,12 @@ static void ICACHE_FLASH_ATTR setup(void) {
 	os_timer_setfn(&loop_timer, (os_timer_func_t *) loop, NULL);
 	os_timer_arm(&loop_timer, user_procLcdUpdatePeriod, true);
 
-
 }
 
 void user_rf_pre_init(void)
 {
 }
-//======================= GPIO interrupt callback =======================================================
-extern uint8_t pin_num[GPIO_PIN_NUM];
-//=======================
-void ICACHE_FLASH_ATTR button_intr_callback(unsigned pin, unsigned level)
-{
-	ets_uart_printf("INTERRUPT: Set default AP\r\n");
-	if(configs.nastr.DEFAULT_AP != 0)
-	{
-		configs.nastr.DEFAULT_AP = 0;
-		saveConfigs();
-	}
-}
-//======================= GPIO init function ============================================================
-void ICACHE_FLASH_ATTR button_init(void)
-{
-	// Pin number 3 = GPIO0
-	GPIO_INT_TYPE gpio_type;
-	uint8_t gpio_pin = 3;
 
-	gpio_type = GPIO_PIN_INTR_NEGEDGE;
-	if (set_gpio_mode(gpio_pin, GPIO_FLOAT, GPIO_INT)) {
-		ets_uart_printf("GPIO%d set interrupt mode\r\n", 0);
-		if (gpio_intr_init(gpio_pin, gpio_type)) {
-			ets_uart_printf("GPIO%d enable %s mode\r\n", pin_num[gpio_pin], "NEG EDGE");
-			gpio_intr_attach(button_intr_callback);
-		} else {
-			ets_uart_printf("Error: GPIO%d not enable %s mode\r\n", pin_num[gpio_pin], "NEG EDGE");
-		}
-	} else {
-		ets_uart_printf("Error: GPIO%d not set interrupt mode\r\n",  pin_num[gpio_pin]);
-	}
-}
 //========================== Init function  =============================================================
 //
 void ICACHE_FLASH_ATTR user_init(void) {
@@ -172,6 +153,29 @@ void ICACHE_FLASH_ATTR user_init(void) {
 	// turn off WiFi for this console only demo
 	wifi_station_set_auto_connect(false);
 	wifi_station_disconnect();
+
+	readConfigs();
+
+	Lcd_Init();
+	Gotoxy(0,0);
+	if(configs.hwSettings.wifi.mode == SOFTAP_MODE) print_string("Точка доступа");
+	else if(configs.hwSettings.wifi.mode == STATION_MODE) print_string("Клиент");
+	Gotoxy(0,1);
+	print_string(configs.hwSettings.wifi.SSID);
+	Gotoxy(0,2);
+	print_string(configs.hwSettings.wifi.SSID_PASS);
+	Gotoxy(0,3);
+	if(configs.hwSettings.deviceMode == DEVICE_MODE_MASTER) print_string("Устр: Главный");
+	else if(configs.hwSettings.deviceMode == DEVICE_MODE_SLAVE) print_string("Устр: Ведомый");
+
+	Gotoxy(0,4);
+	if(configs.hwSettings.sensor[0].mode == SENSOR_MODE_LOCAL) print_string("D1:LOCAL ");
+	else if(configs.hwSettings.sensor[0].mode == SENSOR_MODE_REMOTE) print_string("D1:REMOTE ");
+	Gotoxy(0,5);
+	if(configs.hwSettings.sensor[1].mode == SENSOR_MODE_LOCAL) print_string("D2:LOCAL ");
+	else if(configs.hwSettings.sensor[1].mode == SENSOR_MODE_REMOTE) print_string("D2:REMOTE ");
+
+
 
 	// Start setup timer
 	os_timer_disarm(&loop_timer);

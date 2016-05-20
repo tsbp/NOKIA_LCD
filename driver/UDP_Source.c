@@ -10,19 +10,23 @@
 #include "mem.h"
 #include "driver/UDP_Source.h"
 #include "driver/DS18B20_PR.h"
-#include "driver/lcd1100.h"
+#include "driver/services.h"
 #include "driver/configs.h"
 //=========================================================================================
 extern u_CONFIG configs;
+struct espconn *UDP_P;
+struct espconn *UDP_PC;
 //============================================================================================================================
 void ICACHE_FLASH_ATTR UDP_Init() {
 
 	//system_set_os_print(0);
-	struct espconn *UDP_P = (struct espconn *) os_zalloc(
+	/*struct espconn* */UDP_P = (struct espconn *) os_zalloc(
 			sizeof(struct espconn));
 	UDP_P->proto.udp = (esp_udp *) os_zalloc(sizeof(esp_udp));
 	UDP_P->state = ESPCONN_NONE;
 	UDP_P->type = ESPCONN_UDP;
+
+
 
 	UDP_P->proto.udp->local_port = 7777; //The port on which we want the esp to serve
 	UDP_P->proto.udp->remote_port = 7777; //The port on which we want the esp to serve
@@ -30,6 +34,25 @@ void ICACHE_FLASH_ATTR UDP_Init() {
 	//Set The call back functions
 	espconn_regist_recvcb(UDP_P, UDP_Recieved);
 	espconn_create(UDP_P);
+}
+//============================================================================================================================
+void ICACHE_FLASH_ATTR UDP_Init_client() {
+
+	//system_set_os_print(0);
+	/*struct espconn* */UDP_PC = (struct espconn *) os_zalloc(
+			sizeof(struct espconn));
+	UDP_PC->proto.udp = (esp_udp *) os_zalloc(sizeof(esp_udp));
+	UDP_PC->state = ESPCONN_NONE;
+	UDP_PC->type = ESPCONN_UDP;
+
+
+
+	UDP_PC->proto.udp->local_port = 7777; //The port on which we want the esp to serve
+	UDP_PC->proto.udp->remote_port = 7777; //The port on which we want the esp to serve
+
+	//Set The call back functions
+	espconn_regist_recvcb(UDP_PC, UDP_Recieved);
+	espconn_create(UDP_PC);
 }
 //=========================================================================================
 char ans[8][31] = { {"I146+234-254+274+204+214+234\n\r"},
@@ -59,21 +82,35 @@ void  mergeAnswerWith(char tPtr[2][24][4])
 
 }
 //=========================================================================================
+void ICACHE_FLASH_ATTR sendUDPbroadcast(uint8* abuf, uint16 aLen)
+{
+		UDP_PC->proto.udp->remote_port = (int)7777;
+		UDP_PC->proto.udp->remote_ip[0] = 255;
+		UDP_PC->proto.udp->remote_ip[1] = 255;
+		UDP_PC->proto.udp->remote_ip[2] = 255;
+		UDP_PC->proto.udp->remote_ip[3] = 255;
+		espconn_sent(UDP_PC, abuf, aLen);
+		ets_uart_printf("UDP end ro port %d\r\n", UDP_PC->proto.udp->remote_port);
+}
+//=========================================================================================
 void UDP_Recieved(void *arg, char *pusrdata, unsigned short length)
  {
 
-	 ets_uart_printf("recv udp data: %s\n", pusrdata);
+	 ets_uart_printf("recv udp data: %s\r\n", pusrdata);
      struct espconn *pesp_conn = arg;
      uint8 flashWriteBit = 0;
 
        remot_info *premot = NULL;
-       sint8 value = ESPCONN_OK;
+       //sint8 value = ESPCONN_OK;
        if (espconn_get_connection_info(pesp_conn,&premot,0) == ESPCONN_OK){
-             pesp_conn->proto.tcp->remote_port = premot->remote_port;
-             pesp_conn->proto.tcp->remote_ip[0] = premot->remote_ip[0];
-             pesp_conn->proto.tcp->remote_ip[1] = premot->remote_ip[1];
-             pesp_conn->proto.tcp->remote_ip[2] = premot->remote_ip[2];
-             pesp_conn->proto.tcp->remote_ip[3] = premot->remote_ip[3];
+             pesp_conn->proto.udp->remote_port = 7777;
+             pesp_conn->proto.udp->remote_ip[0] = premot->remote_ip[0];
+             pesp_conn->proto.udp->remote_ip[1] = premot->remote_ip[1];
+             pesp_conn->proto.udp->remote_ip[2] = premot->remote_ip[2];
+             pesp_conn->proto.udp->remote_ip[3] = premot->remote_ip[3];
+
+             ets_uart_printf("recv udp ip: %d.%d.%d.%d\r\n", premot->remote_ip[0], premot->remote_ip[1], premot->remote_ip[2], premot->remote_ip[3]);
+             ets_uart_printf("recv udp port: %d\r\n", premot->remote_port);
 
              int shift = 0xff;
 
@@ -161,33 +198,36 @@ void UDP_Recieved(void *arg, char *pusrdata, unsigned short length)
 			espconn_sent(pesp_conn, "OKW", 3);
 		}
 		//========= save week configs ===========================
-		if (pusrdata[0] == 'S' && pusrdata[1] == 'S'	&& pusrdata[2] == 'I' && pusrdata[3] == 'D')
+		if (pusrdata[0] == 'H' && pusrdata[1] == 'W'	&& pusrdata[2] == 'C' && pusrdata[3] == 'F' && pusrdata[4] == 'G')
 		{
 			int i, j;
-			for(i = 0; i < sizeof(configs.nastr.SSID); i++)
-				configs.nastr.SSID[i] = 0;
-			for(i = 0; i < sizeof(configs.nastr.SSID_PASS); i++)
-				configs.nastr.SSID_PASS[i] = 0;
+			os_memset(configs.hwSettings.wifi.SSID, 0, sizeof(configs.hwSettings.wifi.SSID));
+			os_memset(configs.hwSettings.wifi.SSID_PASS, 0, sizeof(configs.hwSettings.wifi.SSID_PASS));
 
-			for(i = 4; i < length; i++)
+
+
+			for(i = 5; i < length; i++)
 			{
 				if (pusrdata[i] == '$') break;
-				else configs.nastr.SSID[i-4] = pusrdata[i];
+				else configs.hwSettings.byte[i-5] = pusrdata[i];
+				//ets_uart_printf("i=%d, j=%d, data[%02x]\r\n", i, pusrdata[i]);
 			}
-			j = i++;
-			j = i++;
 
-			for(i=j; i < length; i++)
+			j = i+1;
+			for(i = j; i < length; i++)
 			{
-				configs.nastr.SSID_PASS[i-j] = pusrdata[i];
-				//ets_uart_printf("i=%d, j=%d, data[%c]\r\n", i, j, pusrdata[i]);
+				configs.hwSettings.wifi.SSID_PASS[i-j] = pusrdata[i];
+				//ets_uart_printf("i=%d, j=%d, data[%02x]\r\n", i, pusrdata[i]);
 			}
 
 //			ets_uart_printf("new ssid and ssidpass received\r\n");
-//			ets_uart_printf("%s\r\n", configs.nastr.SSID);
-//			ets_uart_printf("%s\r\n", configs.nastr.SSID_PASS);
-			configs.nastr.DEFAULT_AP = 0xff;
+//			ets_uart_printf("%s\r\n", configs.hwSettings.wifi.SSID_PASS);
+//			ets_uart_printf("%s\r\n", configs.hwSettings.wifi.SSID);
+			//configs.hwSettings.wifi.mode = STATION_MODE;
+			serviceMode = MODE_SW_RESET;
+			service_timer_start();
 			flashWriteBit = 1;
+			espconn_sent(pesp_conn, "SAVED", 5);
 		}
 		//========= read ustanovki ===========================
 		if (pusrdata[0] == 'G' && pusrdata[1] == 'U'	&& pusrdata[2] == 'S' && pusrdata[3] == 'T')
@@ -197,7 +237,7 @@ void UDP_Recieved(void *arg, char *pusrdata, unsigned short length)
 			data[4] = '.';
 			data[5] = configs.nastr.delta%10 + '0';
 			data[6] = 'S';
-			data[7] = configs.nastr.swapSens;
+			data[7] = configs.hwSettings.swapSens;
 			//flashWriteBit = 1;
 			espconn_sent(pesp_conn, data, 8);
 		}
@@ -205,7 +245,7 @@ void UDP_Recieved(void *arg, char *pusrdata, unsigned short length)
 		if (pusrdata[0] == 'S' && pusrdata[1] == 'U'	&& pusrdata[2] == 'S' && pusrdata[3] == 'T')
 		{
 			configs.nastr.delta = (pusrdata[4]-'0')*10 + (pusrdata[6]-'0');
-			configs.nastr.swapSens = pusrdata[8];
+			configs.hwSettings.swapSens = pusrdata[8];
 			flashWriteBit = 1;
 		}
 
@@ -213,9 +253,9 @@ void UDP_Recieved(void *arg, char *pusrdata, unsigned short length)
        }
  }
 
-void UDP_sent_callback (void *arg){
-
-	ets_uart_printf("++UDP_SEND_CB\r\n");
-
-}
+//void UDP_sent_callback (void *arg){
+//
+//	ets_uart_printf("++UDP_SEND_CB\r\n");
+//
+//}
 

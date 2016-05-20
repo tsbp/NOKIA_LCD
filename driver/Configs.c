@@ -118,9 +118,8 @@ void ICACHE_FLASH_ATTR timeUpdate(char *aPtr)
 	                  date_time.TIME.sec   = (aPtr[19] - '0')*10 +
 	                                         (aPtr[20] - '0');
 }
-//==============================================================================
 //=============================================================================
-u_CONFIG configs/* = {
+u_CONFIG configs /*= {
 		.cfg[0].periodsCnt = 0x30303036,
 		.cfg[0].pConfig[0].hmStart = 0x30303030, .cfg[0].pConfig[0].temperature = 0x30313930,
 		.cfg[0].pConfig[1].hmStart = 0x30363030, .cfg[0].pConfig[1].temperature = 0x30323232,
@@ -144,8 +143,10 @@ u_CONFIG configs/* = {
 		.nastr.day[4] = 'W',
 		.nastr.day[5] = 'H',
 		.nastr.day[6] = 'H',
-        .nastr.SSID = "Radiy",
-        .nastr.SSID_PASS = "12345678"}*/;
+		.hwSettings.wifi.mode = SOFTAP_MODE,
+		.hwSettings.wifi.auth = AUTH_OPEN,
+		.hwSettings.wifi.SSID = "voodoo",
+        .hwSettings.wifi.SSID_PASS = "12345678"}*/;
 ////==============================================================================
 //u_NASTROYKI nastroyki = {.interval = 600, .delta = 5,
 //                             .day[0] = 'W',

@@ -88,7 +88,7 @@ void ICACHE_FLASH_ATTR Lcd_Init(void){
   spi(CMD,0xaf); // display ON/OFF
 
   Lcd_Clear(); // clear LCD
-  LINES();
+  //LINES();
 }
 
 //==============================================================================

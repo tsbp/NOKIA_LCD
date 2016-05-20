@@ -33,17 +33,44 @@ typedef union
   uint32 byte[11];
   struct
   {
+	uint32 day[7];
     uint32 interval;
     uint32 delta;
-    uint32 swapSens;
-    uint32 day[7];
-    uint32 DEFAULT_AP;
-    uint8 SSID[32];
-    uint8 SSID_PASS[64];
   };
 }u_NASTROYKI;
 //==============================================================================
-#define PERIODS_CNT     (6)
+#define SENSOR_MODE_LOCAL			(0x00)
+#define SENSOR_MODE_REMOTE			(0x01)
+
+#define DEVICE_MODE_MASTER			(0x00)
+#define DEVICE_MODE_SLAVE			(0x01)
+//==============================================================================
+typedef struct __attribute__ ((__packed__))
+{
+	uint8 mode;
+}s_SENS_MODE;
+//==============================================================================
+typedef struct __attribute__ ((__packed__))
+{
+	uint8 mode;
+    uint8 auth;
+	uint8 SSID[32];
+	uint8 SSID_PASS[64];
+}s_WIFI_CFG;
+//==============================================================================
+typedef union __attribute__ ((__packed__))
+{
+	uint8 byte[102];
+	struct __attribute__ ((__packed__))
+	{
+		uint8 deviceMode;
+		s_SENS_MODE sensor[2];
+		uint8 swapSens;
+		s_WIFI_CFG wifi;
+	};
+}u_HARDWARE_SETTINGS;
+//==============================================================================
+#define PERIODS_CNT     (10)
 //==============================================================================
 typedef union
 {
@@ -71,6 +98,7 @@ typedef struct
 {
 	u_CONFIG_u cfg[2];
 	u_NASTROYKI nastr;
+	u_HARDWARE_SETTINGS hwSettings;
 }u_CONFIG;
 //extern u_CONFIG configs;
 //==============================================================================
@@ -94,6 +122,7 @@ typedef union
 extern u_CONFIG configs;
 extern u_CONFIG *cPtrH, *cPtrW;
 //==============================================================================
-uint32 getSetTemperature(unsigned int aTime);
-unsigned char cmpTemperature (unsigned char *aT, signed int arcTemper);
+uint32 ICACHE_FLASH_ATTR getSetTemperature(unsigned int aTime);
+unsigned char ICACHE_FLASH_ATTR cmpTemperature (unsigned char *aT, signed int arcTemper);
+void ICACHE_FLASH_ATTR showTemperature(uint8 aSwap, unsigned char *aBuf);
   
