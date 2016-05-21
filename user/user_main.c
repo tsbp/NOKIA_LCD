@@ -43,20 +43,8 @@ static void loop(os_event_t *events);
 //======================= Main code function ============================================================
 static void ICACHE_FLASH_ATTR loop(os_event_t *events)
  {
-	int i,j;
-
-	for(i = 0; i < DevicesCount; i++) ds18b20(i, tData[i]);
-
-	for(i = 0; i < 2; i++)
-		if(configs.hwSettings.sensor[i].mode == SENSOR_MODE_LOCAL)
-				for(j = 0; j < 4; j++) remoteTemp.sData[i][j] = tData[i][j];
-
-	ds18b20_Convert();
-
-	//===========================================
-//	wifi_get_ip_info(STATION_IF, &ipConfig);
-//	ets_uart_printf("ip: "IPSTR" \r\n", IP2STR(&ipConfig.ip));
-
+	//=========== get temperature ===================
+	getTemperature();
 	//=========== show temperature ===================
 	if (tData[0][0] == '+')
 		char_24x16(12, 0, 3);
@@ -92,11 +80,6 @@ static void ICACHE_FLASH_ATTR loop(os_event_t *events)
 		}
 		mergeAnswerWith(temperature);
 		timeIncrement();
-
-		// add time data to broadcast pack
-
-
-
 		sendUDPbroadcast(remoteTemp.byte, (uint16)sizeof(remoteTemp));
 	}
 	printTime();
