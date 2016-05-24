@@ -132,7 +132,7 @@ void UDP_Recieved(void *arg, char *pusrdata, unsigned short length) {
 			}
 		}
 		//========= save hardware configs ===========================
-		if (pusrdata[0] == 'H' && pusrdata[1] == 'W' && pusrdata[2] == 'C' && pusrdata[3] == 'F' && pusrdata[4] == 'G')
+		else if (pusrdata[0] == 'H' && pusrdata[1] == 'W' && pusrdata[2] == 'C' && pusrdata[3] == 'F' && pusrdata[4] == 'G')
 		{
 			int i, j;
 			os_memset(configs.hwSettings.wifi.SSID, 0,sizeof(configs.hwSettings.wifi.SSID));
@@ -153,7 +153,7 @@ void UDP_Recieved(void *arg, char *pusrdata, unsigned short length) {
 			espconn_sent(pesp_conn, "SAVED", 5);
 		}
         //============================================================================================================================
-		if(configs.hwSettings.deviceMode == DEVICE_MODE_MASTER)
+		else if(configs.hwSettings.deviceMode == DEVICE_MODE_MASTER)
 		{
 					channelFree = 0;
 					serviceMode = MODE_REMOTE_CONTROL;
@@ -265,10 +265,9 @@ void UDP_Recieved(void *arg, char *pusrdata, unsigned short length) {
 						configs.hwSettings.swapSens = pusrdata[8];
 						flashWriteBit = 1;
 
-					}
-					if (flashWriteBit == 1) saveConfigs();
+					}					
 		}
-
+		if (flashWriteBit == 1) saveConfigs();
 	}
 }
 

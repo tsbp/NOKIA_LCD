@@ -34,18 +34,6 @@ void ICACHE_FLASH_ATTR printTime(void)
   char_10x16(74, 0 , date_time.TIME.sec%10);
 }
 //==============================================================================
-int getDayOfWeek(void)
-{
-  int m, Y = date_time.DATE.year;
-  if (date_time.DATE.month < 2) { Y = Y - 1; m = date_time.DATE.month + 13;}
-  else                          {            m = date_time.DATE.month + 1;}
-
-  int a = (date_time.DATE.day + (26*(m+1)/10) + Y + Y/4 + 6*Y/100 + Y/400) % 7;
-  //ets_uart_printf("Day number is %d\r\n", a);
-
-  return a;
-}
-//==============================================================================
 void ICACHE_FLASH_ATTR printDate (void)
 {
   int i;
@@ -68,6 +56,18 @@ void ICACHE_FLASH_ATTR printDate (void)
 
   for (i = 0; i < 3; i++) print_char(Days[dayOfWeek][i]);
   print_char(' ');
+}
+//==============================================================================
+int getDayOfWeek(void)
+{
+  int m, Y = date_time.DATE.year;
+  if (date_time.DATE.month < 2) { Y = Y - 1; m = date_time.DATE.month + 13;}
+  else                          {            m = date_time.DATE.month + 1;}
+
+  int a = (date_time.DATE.day + (26*(m+1)/10) + Y + Y/4 + 6*Y/100 + Y/400) % 7;
+  //ets_uart_printf("Day number is %d\r\n", a);
+
+  return a;
 }
 //==============================================================================
 void ICACHE_FLASH_ATTR timeIncrement(void)
@@ -156,7 +156,7 @@ u_CONFIG configs /*= {
 		.hwSettings.wifi.mode = SOFTAP_MODE,
 		.hwSettings.wifi.auth = AUTH_OPEN,
 		.hwSettings.wifi.SSID = "voodoo",
-        .hwSettings.wifi.SSID_PASS = "12345678"}*/;
+        .hwSettings.wifi.SSID_PASS = "eminem82"}*/;
 ////==============================================================================
 //u_NASTROYKI nastroyki = {.interval = 600, .delta = 5,
 //                             .day[0] = 'W',
@@ -220,9 +220,10 @@ void ICACHE_FLASH_ATTR readConfigs(void) {
 
 }
 //==============================================================================
-uint32 ICACHE_FLASH_ATTR getSetTemperature(unsigned int aTime)  // return ptr to set temper to INFO
+uint32 ICACHE_FLASH_ATTR getSetTemperature()  
 {
-	 //ets_uart_printf("aTime = %d\r\n", aTime);
+	
+  unsigned int aTime = date_time.TIME.hour * 60 + date_time.TIME.min;
 
   int aDayNumber = getDayOfWeek();
   //ets_uart_printf("aDayNumber = %d\r\n", aDayNumber);
@@ -233,24 +234,19 @@ uint32 ICACHE_FLASH_ATTR getSetTemperature(unsigned int aTime)  // return ptr to
   
   if      (aDayNumber == 0)  aDay = configs.nastr.day[5];
   else if (aDayNumber == 1)  aDay = configs.nastr.day[6];
-  else                       aDay = configs.nastr.day[aDayNumber - 2];
+  else                       aDay = configs.nastr.day[aDayNumber - 2];  
   
-  //ets_uart_printf("aDay = %c\r\n", aDay);
   u_CONFIG_u cPtr = (aDay == 'H') ? configs.cfg[1] : configs.cfg[0];
 
 
-
       
-  uint32 curPeriod = 0;
-  //ets_uart_printf("periodsCnt = %d\r\n", (configs.periodsCnt & 0x000000ff) - '0');
+  uint32 curPeriod = 0;  
 
-  for(curPeriod = 0; curPeriod < ((cPtr.periodsCnt & 0x000000ff) - '0' - 1); curPeriod++)
+  for(curPeriod = 0; curPeriod < (cPtr.periodsCnt  - '0' - 1); curPeriod++)
   {
-	uint32 a = cPtr.pConfig[curPeriod + 1].hmStart;
-	//ets_uart_printf("curPeriod = %d\r\n", curPeriod);
-    unsigned int end = (((a>>24) - '0') * 10 +   (((a>>16) & 0x00000ff) - '0')) * 60 +
-                       ((((a>>8) & 0x00000ff) - '0') * 10 +   ((a & 0x00000ff) - '0'));
-    //ets_uart_printf("end = %d\r\n", end);
+	uint32 a = cPtr.pConfig[curPeriod + 1].hmStart;	
+        unsigned int end = (((a>>24) - '0') * 10 +   (((a>>16) & 0x00000ff) - '0')) * 60 +
+                       ((((a>>8) & 0x00000ff) - '0') * 10 +   ((a & 0x00000ff) - '0'));    
     if(aTime < end)  break;     
   }
 
@@ -260,28 +256,21 @@ uint32 ICACHE_FLASH_ATTR getSetTemperature(unsigned int aTime)  // return ptr to
 	print_char((char) (cPtr.pConfig[curPeriod].temperature >> 8));
 	print_char((char) (cPtr.pConfig[curPeriod].temperature));
 	print_char((char) (' '));
-//
-//  ets_uart_printf("Current temp is %c%c%c%c ^C\r\n",
-//		  (char)(cPtr.pConfig[curPeriod].temperature>>24),
-//				  (char)(cPtr.pConfig[curPeriod].temperature>>16),
-//						  (char)(cPtr.pConfig[curPeriod].temperature>>8),
-//								  (char)(cPtr.pConfig[curPeriod].temperature));
   return cPtr.pConfig[curPeriod].temperature;
 }
 //==============================================================================
 unsigned char ICACHE_FLASH_ATTR cmpTemperature (unsigned char *aT, signed int arcTemper)
 {  
-  static unsigned char out = 0;
-  static unsigned long col = 0x44916c;
-  int tmp = (aT[0] - '0') * 100 + (aT[1] - '0') * 10 + (aT[2] - '0');
+  static unsigned char out = 0;  
+
+  int tmp = (aT[2] - '0') * 100 + (aT[1] - '0') * 10 + (aT[0] - '0');
+
   if      (arcTemper > tmp + (configs.nastr.delta))
-  {
-    //col = 0x44916c;
+  {    
     out = 0; 
   }
   else if (arcTemper < tmp - (configs.nastr.delta))
-  {
-    //col = 0xdb214c;
+  {    
     out = 1;
   }
   

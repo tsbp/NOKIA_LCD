@@ -122,7 +122,7 @@ typedef union
 extern u_CONFIG configs;
 extern u_CONFIG *cPtrH, *cPtrW;
 //==============================================================================
-uint32 ICACHE_FLASH_ATTR getSetTemperature(unsigned int aTime);
+uint32 ICACHE_FLASH_ATTR getSetTemperature();
 unsigned char ICACHE_FLASH_ATTR cmpTemperature (unsigned char *aT, signed int arcTemper);
 void ICACHE_FLASH_ATTR showTemperature(uint8 aSwap, unsigned char *aBuf);
   
