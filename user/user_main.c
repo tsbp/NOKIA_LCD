@@ -45,6 +45,8 @@ static void ICACHE_FLASH_ATTR loop(os_event_t *events)
  {
 	//=========== get temperature ===================
 	getTemperature();
+	signed int a = (tData[0][3] - '0') + (tData[0][2] - '0') * 10	+ (tData[0][1] - '0') * 100;
+	signed int b = (tData[1][3] - '0') + (tData[1][2] - '0') * 10	+ (tData[1][1] - '0') * 100;
 	//=========== show temperature ===================
 	if (tData[0][0] == '+')
 		char_24x16(12, 0, 3);
@@ -57,14 +59,40 @@ static void ICACHE_FLASH_ATTR loop(os_event_t *events)
 	char_24x16(tData[0][3] - '0', 56, 3);
 	char_24x16(11, 72, 3);
 
+	Gotoxy(24,7);
+
+	ets_uart_printf("tData[1][0] = %02x \r\n", tData[1][0]);
+
+	print_char(tData[1][0]);
+	print_char(tData[1][1]);
+	print_char(tData[1][2]);
+	print_char('.');
+	print_char(tData[1][3]);
+	print_char(0xb7);
+	print_char('C');
 
 	//===========================================
 	//uint32 t = getSetTemperature(date_time.TIME.hour * 60 + date_time.TIME.min);
 	//gpio_write(GPIO_LED_PIN, ~gpio_read(GPIO_LED_PIN));
 
 
+	//==========================================================================
 	if(configs.hwSettings.deviceMode == DEVICE_MODE_MASTER)
 	{
+		timeIncrement();
+		//===========================================
+
+		uint32 t = getSetTemperature();
+		cmpTemperature ((unsigned char *)(&t), a);
+		//gpio_write(GPIO_LED_PIN, ~gpio_read(GPIO_LED_PIN));
+		//============= sendUDPbroadcast in DEVICE_MODE_MASTER =================
+		if(configs.hwSettings.wifi.mode == STATION_MODE)
+			if(wifi_station_get_connect_status() == STATION_GOT_IP)
+				sendUDPbroadcast(remoteTemp.byte, (uint16)sizeof(remoteTemp));
+		if(configs.hwSettings.wifi.mode == SOFTAP_MODE)
+			if(wifi_softap_get_station_num() > 0)
+				sendUDPbroadcast(remoteTemp.byte, (uint16)sizeof(remoteTemp));
+		//===============================================
 		addValueToArray(tData[0], temperature[0], NON_ROTATE);
 		addValueToArray(tData[1], temperature[1], NON_ROTATE);
 		//================================================
@@ -79,11 +107,10 @@ static void ICACHE_FLASH_ATTR loop(os_event_t *events)
 				//mergeAnswerWith(temperature);
 		}
 		mergeAnswerWith(temperature);
-		timeIncrement();
-		sendUDPbroadcast(remoteTemp.byte, (uint16)sizeof(remoteTemp));
+
 	}
 	printTime();
-	printDate();
+	//printDate();
 }
 
 

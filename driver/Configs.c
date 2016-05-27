@@ -24,38 +24,30 @@ int  dayOfWeek;
 //==============================================================================
 void ICACHE_FLASH_ATTR printTime(void)
 {
-  char_10x16(12 , 0 , date_time.TIME.hour/10);
-  char_10x16(22, 0 , date_time.TIME.hour%10);
-  char_10x16(32, 0 , 10);
-  char_10x16(38, 0 , date_time.TIME.min/10);
-  char_10x16(48, 0 , date_time.TIME.min%10);
-  char_10x16(58, 0 , 10);
-  char_10x16(64, 0 , date_time.TIME.sec/10);
-  char_10x16(74, 0 , date_time.TIME.sec%10);
-}
-//==============================================================================
-void ICACHE_FLASH_ATTR printDate (void)
-{
+  char_10x16(8 , 0 , date_time.TIME.hour/10);
+  char_10x16(18, 0 , date_time.TIME.hour%10);
+  char_10x16(28, 0 , 10);
+  char_10x16(34, 0 , date_time.TIME.min/10);
+  char_10x16(44, 0 , date_time.TIME.min%10);
+
   int i;
-  Gotoxy(3,7);
-  if(date_time.DATE.day >= 10) print_char(date_time.DATE.day/10 + 0x30);
-  print_char(date_time.DATE.day%10 + 0x30);
-  print_char(' ');
-  for (i = 0; i < 3; i++) print_char(Months[date_time.DATE.month][i]);
-  print_char(' ');
-  print_char(date_time.DATE.year/1000     + 0x30);
-  print_char(date_time.DATE.year%1000/100 + 0x30);
-  print_char(date_time.DATE.year%100/10   + 0x30);
-  print_char(date_time.DATE.year%10       + 0x30);
-  print_char(',');
+    Gotoxy(60,0);
+    print_char(date_time.DATE.day/10 + 0x30);
+    print_char(date_time.DATE.day%10 + 0x30);
+    print_char('.');
+    print_char((date_time.DATE.month+1)/10 + 0x30);
+    print_char((date_time.DATE.month+1)%10 + 0x30);
 
-  int m, Y = date_time.DATE.year;
-  if (date_time.DATE.month < 2) { Y = Y - 1; m = date_time.DATE.month + 13;}
-  else                          {            m = date_time.DATE.month + 1;}
-  dayOfWeek = getDayOfWeek();
+    int m, Y = date_time.DATE.year;
+    if (date_time.DATE.month < 2) { Y = Y - 1; m = date_time.DATE.month + 13;}
+    else                          {            m = date_time.DATE.month + 1;}
+    dayOfWeek = getDayOfWeek();
 
-  for (i = 0; i < 3; i++) print_char(Days[dayOfWeek][i]);
-  print_char(' ');
+    Gotoxy(60, 1);
+    print_char('-');
+    for (i = 0; i < 3; i++) print_char(Days[dayOfWeek][i]);
+    print_char('-');
+
 }
 //==============================================================================
 int getDayOfWeek(void)
@@ -250,12 +242,12 @@ uint32 ICACHE_FLASH_ATTR getSetTemperature()
     if(aTime < end)  break;     
   }
 
-    Gotoxy(0,2);
-	print_char((char) (aDay));
-	print_char((char) (cPtr.pConfig[curPeriod].temperature >> 16));
-	print_char((char) (cPtr.pConfig[curPeriod].temperature >> 8));
-	print_char((char) (cPtr.pConfig[curPeriod].temperature));
-	print_char((char) (' '));
+//    Gotoxy(0,2);
+//	print_char((char) (aDay));
+//	print_char((char) (cPtr.pConfig[curPeriod].temperature >> 16));
+//	print_char((char) (cPtr.pConfig[curPeriod].temperature >> 8));
+//	print_char((char) (cPtr.pConfig[curPeriod].temperature));
+//	print_char((char) (' '));
   return cPtr.pConfig[curPeriod].temperature;
 }
 //==============================================================================
@@ -265,13 +257,16 @@ unsigned char ICACHE_FLASH_ATTR cmpTemperature (unsigned char *aT, signed int ar
 
   int tmp = (aT[2] - '0') * 100 + (aT[1] - '0') * 10 + (aT[0] - '0');
 
+  Gotoxy(90,7);
   if      (arcTemper > tmp + (configs.nastr.delta))
-  {    
-    out = 0; 
+  {
+	  print_char(0xbd);
+	  out = 0;
   }
   else if (arcTemper < tmp - (configs.nastr.delta))
   {    
     out = 1;
+    print_char(0x1e);
   }
   
 
