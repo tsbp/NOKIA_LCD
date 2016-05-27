@@ -90,7 +90,7 @@ void ICACHE_FLASH_ATTR sendUDPbroadcast(uint8* abuf, uint16 aLen)
 		UDP_PC->proto.udp->remote_ip[2] = 255;
 		UDP_PC->proto.udp->remote_ip[3] = 255;
 		espconn_sent(UDP_PC, abuf, aLen);
-		ets_uart_printf("UDP end ro port %d\r\n", UDP_PC->proto.udp->remote_port);
+		//ets_uart_printf("UDP end ro port %d\r\n", UDP_PC->proto.udp->remote_port);
 	}
 }
 //=========================================================================================
@@ -108,8 +108,8 @@ void UDP_Recieved(void *arg, char *pusrdata, unsigned short length) {
 		pesp_conn->proto.udp->remote_ip[2] = premot->remote_ip[2];
 		pesp_conn->proto.udp->remote_ip[3] = premot->remote_ip[3];
 
-		ets_uart_printf("recv udp ip: %d.%d.%d.%d\r\n", premot->remote_ip[0] ,premot->remote_ip[1], premot->remote_ip[2], premot->remote_ip[3]);
-		ets_uart_printf("recv udp port: %d\r\n", premot->remote_port);
+//		ets_uart_printf("recv udp ip: %d.%d.%d.%d\r\n", premot->remote_ip[0] ,premot->remote_ip[1], premot->remote_ip[2], premot->remote_ip[3]);
+//		ets_uart_printf("recv udp port: %d\r\n", premot->remote_port);
 
 		//========= Remote temperature ===========================
 		if (pusrdata[0] == 'R' && pusrdata[1] == 'T' && pusrdata[2] == 'M'	&& pusrdata[3] == 'P')
@@ -173,6 +173,7 @@ void UDP_Recieved(void *arg, char *pusrdata, unsigned short length) {
 							timeUpdate(pusrdata);
 						}
 
+						ets_uart_printf("ans udp: %s\r\n",ans[shift + (pusrdata[1] - '0') - 1]);
 						espconn_sent(pesp_conn, ans[shift + (pusrdata[1] - '0') - 1], 30);
 					}
 

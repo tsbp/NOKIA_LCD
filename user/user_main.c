@@ -61,7 +61,6 @@ static void ICACHE_FLASH_ATTR loop(os_event_t *events)
 
 	Gotoxy(24,7);
 
-	ets_uart_printf("tData[1][0] = %02x \r\n", tData[1][0]);
 
 	print_char(tData[1][0]);
 	print_char(tData[1][1]);
@@ -96,11 +95,11 @@ static void ICACHE_FLASH_ATTR loop(os_event_t *events)
 		addValueToArray(tData[0], temperature[0], NON_ROTATE);
 		addValueToArray(tData[1], temperature[1], NON_ROTATE);
 		//================================================
-		static int cntr = 60;
-		if (cntr)		cntr--;
+		static int cntr;
+		if (cntr != 0)		cntr--;
 		else
 		{
-			cntr = 60;
+			cntr = 900;
 			ets_uart_printf("T1 = %s, T2 = %s\r\n", tData[0], tData[1]);
 			addValueToArray(tData[0], temperature[0], ROTATE);
 			addValueToArray(tData[1], temperature[1], ROTATE);
@@ -157,6 +156,8 @@ void ICACHE_FLASH_ATTR user_init(void) {
 	uart_init(BIT_RATE_115200, BIT_RATE_115200);
 	os_delay_us(1000000);
 	ets_uart_printf("System init...\r\n");
+
+	system_set_os_print(0);
 
     set_gpio_mode(GPIO_LED_PIN, GPIO_PULLUP, GPIO_OUTPUT);
     button_init();
