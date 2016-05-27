@@ -27,7 +27,6 @@ typedef struct
     };
   }TIME;
 }s_DATE_TIME;
-extern s_DATE_TIME date_time;
 //==============================================================================
 typedef union
 {
