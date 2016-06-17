@@ -80,10 +80,9 @@ static void ICACHE_FLASH_ATTR loop(os_event_t *events)
 	{
 		timeIncrement();
 		//===========================================
+		uint16 t = getSetTemperature();
+		//gpio_write(1, cmpTemperature (t, a));
 
-		uint32 t = getSetTemperature();
-		cmpTemperature ((unsigned char *)(&t), a);
-		//gpio_write(GPIO_LED_PIN, ~gpio_read(GPIO_LED_PIN));
 		//============= sendUDPbroadcast in DEVICE_MODE_MASTER =================
 		if(configs.hwSettings.wifi.mode == STATION_MODE)
 			if(wifi_station_get_connect_status() == STATION_GOT_IP)
@@ -92,8 +91,8 @@ static void ICACHE_FLASH_ATTR loop(os_event_t *events)
 			if(wifi_softap_get_station_num() > 0)
 				sendUDPbroadcast(remoteTemp.byte, (uint16)sizeof(remoteTemp));
 		//===============================================
-		addValueToArray(tData[0], temperature[0], NON_ROTATE);
-		addValueToArray(tData[1], temperature[1], NON_ROTATE);
+		addValueToArray(tData[0], plotData[0], NON_ROTATE);
+		addValueToArray(tData[1], plotData[1], NON_ROTATE);
 		//================================================
 		static int cntr;
 		if (cntr != 0)		cntr--;
@@ -101,15 +100,12 @@ static void ICACHE_FLASH_ATTR loop(os_event_t *events)
 		{
 			cntr = 900;
 			ets_uart_printf("T1 = %s, T2 = %s\r\n", tData[0], tData[1]);
-			addValueToArray(tData[0], temperature[0], ROTATE);
-			addValueToArray(tData[1], temperature[1], ROTATE);
-				//mergeAnswerWith(temperature);
+			addValueToArray(tData[0], plotData[0], ROTATE);
+			addValueToArray(tData[1], plotData[1], ROTATE);
 		}
-		mergeAnswerWith(temperature);
 
 	}
 	printTime();
-	//printDate();
 }
 
 
@@ -123,9 +119,6 @@ static void ICACHE_FLASH_ATTR setup(void)
 	LINES();
 
 	ds18b20_init();
-	temperArrInit(temperature);
-
-	//saveConfigs();
 
 
 	if     (configs.hwSettings.wifi.mode == SOFTAP_MODE) 		setup_wifi_ap_mode();
