@@ -21,12 +21,9 @@ extern s_DATE_TIME date_time;
 
 #define GPIO_LED_PIN 0
 
-
 #define user_procLcdUpdatePeriod      1000
 #define user_procTaskPrio        0
 #define user_procTaskQueueLen    1
-
-static char temperature[2][POINTS_CNT][4];
 
 static volatile os_timer_t loop_timer;
 
@@ -70,11 +67,6 @@ static void ICACHE_FLASH_ATTR loop(os_event_t *events)
 	print_char(0xb7);
 	print_char('C');
 
-	//===========================================
-	//uint32 t = getSetTemperature(date_time.TIME.hour * 60 + date_time.TIME.min);
-	//gpio_write(GPIO_LED_PIN, ~gpio_read(GPIO_LED_PIN));
-
-
 	//==========================================================================
 	if(configs.hwSettings.deviceMode == DEVICE_MODE_MASTER)
 	{
@@ -99,7 +91,6 @@ static void ICACHE_FLASH_ATTR loop(os_event_t *events)
 		else
 		{
 			cntr = 900;
-			ets_uart_printf("T1 = %s, T2 = %s\r\n", tData[0], tData[1]);
 			addValueToArray(tData[0], plotData[0], ROTATE);
 			addValueToArray(tData[1], plotData[1], ROTATE);
 		}
@@ -187,5 +178,5 @@ void ICACHE_FLASH_ATTR user_init(void) {
 	// Start setup timer
 	os_timer_disarm(&loop_timer);
 	os_timer_setfn(&loop_timer, (os_timer_func_t *) setup, NULL);
-	os_timer_arm(&loop_timer, user_procLcdUpdatePeriod, false);
+	os_timer_arm(&loop_timer, user_procLcdUpdatePeriod * 2, false);
 }
